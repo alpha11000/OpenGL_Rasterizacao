@@ -185,9 +185,7 @@ inline std::list<ponto> drawLine(ponto p1, ponto p2, bool invertY = false, int h
 
 		pontos.push_back(*p);
 	}
-
 	return pontos;
-
 }
 
 inline std::list<ponto> getRetanglePoints(ponto p1, ponto p2, bool invertY = false, int height = 0) {
@@ -296,9 +294,6 @@ inline std::list<ponto> drawCircuference(int r, bool invertY = false, int height
 		center = new ponto;
 		center->setCoordinates(0, 0);
 	}
-
-	std::cout << "centro da circuferencia: " << std::endl;
-	printPoint(center);
 
 	float d = 1 - r,
 		dE = 3,
@@ -463,18 +458,15 @@ inline bool compareColors(float* c1, float* c2) {
 }
 
 inline bool compareMatrix(float** m1, float** m2, int height, int width) {
-	printf("comparing matrices\n");
 	for (int i = 0; i < width * height; i++) {
 		if (!compareColors(m1[i], m2[i]))
 			return false;
 	}
-	printf("returned true\n");
 	return true;
 }
 
-inline std::list<ponto> getListOfCoordinates(float** colorsMatrix, int height, int width) {
+inline std::list<ponto> getListOfCoordinates(float** colorsMatrix, int height, int width, float* clr) {
 	std::list<ponto> pontos;
-	float* clr = new float[3]{1, 1, 1};
 
 	for (int h = 0; h < height; h++) {
 		for (int w = 0; w < width; w++) {
@@ -493,6 +485,16 @@ inline std::list<ponto> getListOfCoordinates(float** colorsMatrix, int height, i
 	return pontos;
 }
 
+inline float** getArrayCopy(float** orig, int size) {
+	float** output = new float*[size];
+
+	for (int i = 0; i < size; i++) {
+		output[i] = orig[i];
+	}
+
+	return output;
+}
+
 inline std::list<ponto> floydFill(float** screenColors, ponto* clickPosition,int height, int width) {
 	
 	std::list<ponto> pontos;
@@ -500,17 +502,10 @@ inline std::list<ponto> floydFill(float** screenColors, ponto* clickPosition,int
 	int position = (width * clickPosition->y) + clickPosition->x;
 	float* clickPositionColor;
 
-	//float** colorsMatrix = new float* [width * height];
-	float** colorsMatrix = screenColors;
-	//float** last = new float* [width * height];
-	float** last = screenColors;
+	float** colorsMatrix = getArrayCopy(screenColors, width * height);
+	float** last = getArrayCopy(screenColors, width * height);
 	float* clr = new float[3]{ -1, -1, -1 };
-	float* color = new float[3]{ 1, 1, 1 };
-
-	for (int i = 0; i < width * height; i++) {
-		colorsMatrix[i] = clr;
-		last[i] = clr;
-	}
+	float* color = new float[3]{ -1, -1, -1 };
 
 	if (position < width * height) {
 		clickPositionColor = screenColors[position];
@@ -521,41 +516,32 @@ inline std::list<ponto> floydFill(float** screenColors, ponto* clickPosition,int
 		return pontos;
 
 
-	printf("ok\n");
 	int i = 0;
 	while (true) {
-		printf("it %d\n", i++);
 		for (int h = 0; h < height; h++) {
 			for (int w = 0; w < width; w++) {
 				int index = (width * h) + w;
-				//std::cout << "index : " << index << std::endl;
 
 				if (index < width * height) {
 					if (compareColors(last[index], color)) {
 
 						index = (width * (h + 1)) + w;
-						if (index < width * height && h < height - 1 && compareColors(colorsMatrix[index], clickPositionColor)) {
+						if (index < width * height && h < height - 1 && compareColors(colorsMatrix[index], clickPositionColor))
 							colorsMatrix[index] = color;
-							//printf("ent 1\n");
-						}
 
 						index = (width * (h - 1)) + w;
-						if (index < width * height && h > 0 && compareColors(colorsMatrix[index], clickPositionColor)) {
+						if (index < width * height && h > 0 && compareColors(colorsMatrix[index], clickPositionColor)) 
 							colorsMatrix[index] = color;
-							//printf("ent 2\n");
-						}
 
 						index = (width * h) + (w + 1);
-						if (index < width * height && h < width - 1 && compareColors(colorsMatrix[index], clickPositionColor)) {
+						if (index < width * height && w < width - 1 && compareColors(colorsMatrix[index], clickPositionColor)) 
 							colorsMatrix[index] = color;
-							//printf("ent 3\n");
-						}
+	
 
 						index = (width * h) + (w - 1);
-						if (index < width * height && h > 0 && compareColors(colorsMatrix[index], clickPositionColor)) {
+						if (index < width * height && w > 0 && compareColors(colorsMatrix[index], clickPositionColor)) 
 							colorsMatrix[index] = color;
-							//printf("ent 4\n");
-						}
+						
 					}
 				}
 			}
@@ -565,10 +551,10 @@ inline std::list<ponto> floydFill(float** screenColors, ponto* clickPosition,int
 			break;
 		}
 
-		last = colorsMatrix;
+		last = getArrayCopy(colorsMatrix, width * height);
 	}
 
-	pontos = getListOfCoordinates(colorsMatrix, height, width);
+	pontos = getListOfCoordinates(colorsMatrix, height, width, color);
 	return pontos;
 }
 

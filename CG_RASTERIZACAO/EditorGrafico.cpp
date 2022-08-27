@@ -199,7 +199,7 @@ float** getColorsMatrix() {
             }
         }
 
-        if ((width * p.y) + p.x < width * height) {
+        if (((width * p.y) + p.x < width * height) && p.x < width && p.y < height && p.x >= 0 && p.y >= 0) {
             colorsMatrix[(width * p.y) + p.x] = clr;  
         }
         i++;
@@ -254,6 +254,8 @@ void resetPontos() {
 void SpecialInput(int key, int x, int y)
 {
     ponto* center = calculateCenter(lastForm);
+    if (lastDrawMode == 11)
+        return;
 
     switch (key) 
     {
@@ -357,8 +359,6 @@ void SpecialInput(int key, int x, int y)
 // Funcao usada na funcao callback para utilizacao das teclas normais do teclado
 void keyboard(unsigned char key, int x, int y) {
 
-    std::cout << "pressed key: " << key << std::endl;
-
     switch (key) { // key - variavel que possui valor ASCII da tecla precionada
     case 27: // codigo ASCII da tecla ESC
         exit(0); // comando pra finalizacao do programa
@@ -449,6 +449,22 @@ void keyboard(unsigned char key, int x, int y) {
         changeLastColor(0, 0, 1);
         std::cout << "cor setada como Azul" << std::endl;
         break;
+    case '5':
+        changeLastColor(1, 1, 1);
+        std::cout << "cor setada como Branco" << std::endl;
+        break;
+    case '6':
+        changeLastColor(1, 0, 1);
+        std::cout << "cor setada como Roxo" << std::endl;
+        break;
+    case '7':
+        changeLastColor(1, 1, 0);
+        std::cout << "cor setada como Amarelo" << std::endl;
+        break; 
+    case '8':
+        changeLastColor(0, 1, 1);
+        std::cout << "cor setada como Ciano" << std::endl;
+        break;
     case 'F':
         enablePolygonFilling = !enablePolygonFilling;
         break;
@@ -502,7 +518,7 @@ void mouse(int button, int state, int x, int y)
                     fillLastForm();
                 }
                 break;
-            case 10: 
+            case 10:
                 if (clicks >= 2) {
                     std::cout << "drawing Circuference..." << std::endl;
                     setLastForm(false);
@@ -520,7 +536,7 @@ void mouse(int button, int state, int x, int y)
                 break; 
 
             case 11: 
-                p->setCoordinates(x, p->y);
+                p->setCoordinates(x, height - p->y);  
                 printf("getting screen\n");
                 screen = getColorsMatrix();
                 printf("getting filling\n");
