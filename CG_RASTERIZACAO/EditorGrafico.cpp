@@ -119,19 +119,21 @@ void setLastForm(bool clearOriginal) {
     }
 }
 
-void insertForm(std::list<ponto> listPonto, bool updateLastDrawMode = true) {
+void insertForm(std::list<ponto> listPonto, bool updateLastDrawMode = true, bool updateColorPosition = true, bool resetClicks = true) {
+    
     if (updateLastDrawMode) {
         lastDrawMode = drawMode;
         lastPolygonFilling = enablePolygonFilling;
     }
-
-    definePointsColor();
+    if(updateColorPosition)
+        definePointsColor();
     drawPontosList.insert(drawPontosList.end(), listPonto.begin(), listPonto.end());
-    clicks = 0;
-    pontosListT.clear();
-    glutPostRedisplay();  
-}
 
+    if(resetClicks)
+        clicks = 0;
+    pontosListT.clear();
+    glutPostRedisplay();
+}
 // Funcao Principal do C
 int main(int argc, char** argv) {
 
@@ -175,10 +177,41 @@ void reshape(int w, int h)
     glMatrixMode(GL_MODELVIEW); 
 }
 
+float** getColorsMatrix() {
+    float** colorsMatrix = new float*[(width * height)]; 
+    float* clr = new float[3]{ 1, 1, 1 }; 
+
+    for (int i = 0; i < width * height; i++) {
+        colorsMatrix[i] = new float[3];
+    }
+
+    int size = colorsMap.size();
+    colorPositionMap* arr = new colorPositionMap[size];
+    std::copy(colorsMap.begin(), colorsMap.end(), arr);
+
+    int i = 0, j = 0;
+
+    for (auto p : drawPontosList) {
+        if (j < size) {
+            if (arr[j].position <= i) {
+                clr = arr[j].color;
+                j++;
+            }
+        }
+
+        if ((width * p.y) + p.x < width * height) {
+            colorsMatrix[(width * p.y) + p.x] = clr;  
+        }
+        i++;
+    }
+
+    return colorsMatrix;
+}
+
 void fillLastForm() {
     if (lastForm.size() > 2 && lastPolygonFilling) {
         std::list<ponto> temp = fillPolygon(lastForm, true, height);
-        insertForm(temp);
+        insertForm(temp, false, false, false);
     }
 }
 
@@ -207,7 +240,7 @@ void reRasterizeForm(int drawListIndex, std::list<ponto> &listPonto ) {
         break;
     }
     sequentialPopPonto(drawPontosList, drawListIndex);
-    insertForm(temp, false);
+    insertForm(temp, false, false, false);
     fillLastForm();
 }
 
@@ -366,6 +399,12 @@ void keyboard(unsigned char key, int x, int y) {
         resetPontos();
         break;
 
+    case 'f':
+        drawMode = 11;
+        std::cout << "changed to Floyd Fill mode." << std::endl;
+        resetPontos();
+        break;
+
     case 'T':
         drawMode = 5;
         std::cout << "changed to Translation mode." << std::endl;
@@ -392,9 +431,8 @@ void keyboard(unsigned char key, int x, int y) {
         std::cout << "changed to Rotation mode." << std::endl;
         resetPontos();
         break;
-
-
-        //Alteração das cores
+    
+    //Alteração das cores
     case '1':
         changeLastColor(0, 0, 0);
         std::cout << "cor setada como Preto" << std::endl;
@@ -420,10 +458,12 @@ void keyboard(unsigned char key, int x, int y) {
 //Funcao usada na funcao callback para a utilizacao do mouse
 void mouse(int button, int state, int x, int y)
 {
+    bool updateFilling;
     switch (button) {
     case GLUT_LEFT_BUTTON:
         if (state == GLUT_DOWN) {
             clicks++;
+            float** screen;
             ponto* p = new ponto; 
             p->x = x;
             p->y = y;
@@ -440,6 +480,7 @@ void mouse(int button, int state, int x, int y)
                     setLastForm(false);
                     temp = drawLine(popPonto(pontosListT), popPonto(pontosListT), true, height);
                     insertForm(temp);
+                    fillLastForm();
                 }
                 break;
             case 2:
@@ -449,6 +490,7 @@ void mouse(int button, int state, int x, int y)
                     temp = drawRectangle(popPonto(pontosListT), popPonto(pontosListT), true, height);
                     insertForm(temp);
                     lastForm = getRetanglePoints(popPonto(lastForm), popPonto(lastForm), true, height);
+                    fillLastForm();
                 }
                 break;
             case 3:
@@ -457,6 +499,7 @@ void mouse(int button, int state, int x, int y)
                     setLastForm(false);
                     temp = drawTriangle(popPonto(pontosListT), popPonto(pontosListT), popPonto(pontosListT), true, height);
                     insertForm(temp);
+                    fillLastForm();
                 }
                 break;
             case 10: 
@@ -472,8 +515,18 @@ void mouse(int button, int state, int x, int y)
                      
                     temp = drawCircuference(r, true, height, &center);
                     insertForm(temp);
+                    fillLastForm();
                 }
                 break; 
+
+            case 11: 
+                p->setCoordinates(x, p->y);
+                printf("getting screen\n");
+                screen = getColorsMatrix();
+                printf("getting filling\n");
+                temp = floydFill(screen, p, height, width);
+                insertForm(temp);
+                break;
             default:
                 break; 
             }
@@ -484,7 +537,6 @@ void mouse(int button, int state, int x, int y)
         break;
     }
 
-    fillLastForm();
 }
 
 // Funcao usada na funcao callback para desenhar na tela
@@ -497,7 +549,6 @@ void display(void) {
     drawPontos(drawPontosList);
 
     glutSwapBuffers(); // manda o OpenGl renderizar as primitivas
-
 }
 
 //Funcao que desenha os pontos contidos em uma lista de pontos
@@ -509,9 +560,10 @@ void drawPontos(std::list<ponto> pontos) {
     std::copy(colorsMap.begin(), colorsMap.end(), arr);
     glBegin(GL_POINTS); //Seleciona a primitiva GL_POINTS para desenhar
 
+
+
     int i = 0;
     int j = 0;
-
     for (auto p : pontos) {
         if (j < size) {
             if (arr[j].position <= i) {
